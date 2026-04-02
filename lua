@@ -1,42 +1,37 @@
--- [[ SCRIPT SOURCE CLONER v1.0 ]]
+-- [[ BABFT DEEP REMOTE SCANNER v2.0 ]]
 local setclipboard = setclipboard or print
-local decompile = decompile or nil -- 익스큐터의 디컴파일러 기능 확인
 
-local function CopyScriptSource(scriptName)
-    -- 1. 게임 전체에서 해당 이름의 스크립트를 찾음
-    local targetScript = nil
-    for _, obj in pairs(game:GetDescendants()) do
-        if obj.Name == scriptName and (obj:IsA("LocalScript") or obj:IsA("ModuleScript")) then
-            targetScript = obj
-            break
+local function DeepScan()
+    local results = "--- [ BABFT DEEP SCAN RESULTS ] ---\n"
+    local count = 0
+    
+    -- 탐색할 서비스 목록
+    local services = {
+        game:GetService("ReplicatedStorage"),
+        game:GetService("Workspace"),
+        game:GetService("JointsService"),
+        game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+    }
+
+    for _, service in pairs(services) do
+        for _, obj in pairs(service:GetDescendants()) do
+            if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+                -- 이름, 부모, 그리고 실제 경로(FullName)까지 복사해서 정확한 위치 파악
+                results = results .. "Name: " .. obj.Name .. " | Path: " .. obj:GetFullName() .. "\n"
+                count = count + 1
+            end
         end
     end
 
-    if targetScript then
-        -- 2. 소스 코드 추출 (익스큐터의 디컴파일 기능 사용)
-        local source = ""
-        if decompile then
-            source = decompile(targetScript) -- 바이트코드를 다시 루아 코드로 변환
-        else
-            source = "-- [ERROR] Your executor doesn't support decompiling."
-        end
-
-        local finalData = "--- [ SCRIPT CLONED: " .. targetScript.Name .. " ] ---\n"
-        finalData = finalData .. "Path: " .. targetScript:GetFullName() .. "\n\n"
-        finalData = finalData .. source
-
-        -- 3. 클립보드 복사
-        setclipboard(finalData)
-        
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "COPY SUCCESS",
-            Text = scriptName .. " 소스 코드가 복사되었습니다!",
-            Duration = 5
-        })
-    else
-        warn("[SYSTEM] 해당 이름의 스크립트를 찾을 수 없거나 서버 전용 스크립트입니다.")
-    end
+    results = results .. "\nTotal Found: " .. count
+    setclipboard(results)
+    
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "DEEP SCAN COMPLETE",
+        Text = count .. "개의 숨겨진 리모트를 찾았습니다! (클립보드 확인)",
+        Duration = 5
+    })
 end
 
--- 실행 예시: 'MainClient'라는 이름의 스크립트를 복사하고 싶을 때
-CopyScriptSource("SubmitName") 
+pcall(DeepScan)
+
